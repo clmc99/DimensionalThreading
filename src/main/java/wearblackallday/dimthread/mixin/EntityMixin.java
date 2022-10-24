@@ -30,6 +30,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import wearblackallday.dimthread.DimThread;
+import wearblackallday.dimthread.util.ServerManager;
 import wearblackallday.dimthread.util.UncompletedTeleportTarget;
 
 import java.util.Optional;
@@ -99,7 +100,7 @@ public abstract class EntityMixin {
 	 */
 	@Inject(method = "moveToWorld", at = @At("HEAD"), cancellable = true)
 	public void onMoveToWorld(ServerWorld destination, CallbackInfoReturnable<Entity> ci) {
-		if (!DimThread.MANAGER.isActive(destination.getServer()))
+		if (!ServerManager.isActive(destination.getServer()))
 			return;
 
 		if (DimThread.owns(Thread.currentThread())) {
@@ -129,7 +130,7 @@ public abstract class EntityMixin {
 	 */
 	@Redirect(method = "moveToWorld", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/Entity;copyFrom(Lnet/minecraft/entity/Entity;)V"))
 	private void onMoveToWorldCopyFrom(Entity instance, Entity original) {
-		if(DimThread.MANAGER.isActive(getServer())) {
+		if(ServerManager.isActive(getServer())) {
 			NbtCompound nbtCompound = ((EntityMixin) (Object) original).nbtCachedForMoveToWorld;
 			nbtCompound.remove("Dimension");
 			instance.readNbt(nbtCompound);
@@ -147,7 +148,7 @@ public abstract class EntityMixin {
 	@Redirect(method = "moveToWorld", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/Entity;getTeleportTarget(Lnet/minecraft/server/world/ServerWorld;)Lnet/minecraft/world/TeleportTarget;"))
 	private TeleportTarget onMoveToWorldGetTeleportTarget(@NotNull Entity instance, ServerWorld destination) {
 		EntityMixin ins = ((EntityMixin) (Object) instance);
-		if(DimThread.MANAGER.isActive(getServer())) {
+		if(ServerManager.isActive(getServer())) {
 			return ins.uncompletedTeleportTargetForMoveToWorld == null ? null : ins.uncompletedTeleportTargetForMoveToWorld.complete(destination);
 		} else {
 			return ins.getTeleportTarget(destination);

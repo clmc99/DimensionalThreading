@@ -12,9 +12,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import wearblackallday.dimthread.DimThread;
-import wearblackallday.dimthread.util.CrashInfo;
-import wearblackallday.dimthread.util.ServerWorldAccessor;
-import wearblackallday.dimthread.util.ThreadPool;
+import wearblackallday.dimthread.util.*;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -22,7 +20,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 
 @Mixin(MinecraftServer.class)
-public abstract class MinecraftServerMixin {
+public abstract class MinecraftServerMixin implements IThreadedServer {
 
 	@Shadow private int ticks;
 	@Shadow private PlayerManager playerManager;
@@ -37,7 +35,7 @@ public abstract class MinecraftServerMixin {
 	@ModifyVariable(method = "tickWorlds", at = @At(value = "INVOKE_ASSIGN",
 			target = "Ljava/lang/Iterable;iterator()Ljava/util/Iterator;", ordinal = 0))
 	public Iterator<?> tickWorlds(Iterator<?> oldValue) {
-		return DimThread.MANAGER.isActive((MinecraftServer)(Object)this) ? Collections.emptyIterator() : oldValue;
+		return ServerManager.isActive((MinecraftServer)(Object)this) ? Collections.emptyIterator() : oldValue;
 	}
 
 	/**
@@ -47,7 +45,7 @@ public abstract class MinecraftServerMixin {
 	@Inject(method = "tickWorlds", at = @At(value = "INVOKE",
 			target = "Ljava/lang/Iterable;iterator()Ljava/util/Iterator;"))
 	public void tickWorlds(BooleanSupplier shouldKeepTicking, CallbackInfo ci) {
-		if(!DimThread.MANAGER.isActive((MinecraftServer)(Object)this))return;
+		if(!ServerManager.isActive((MinecraftServer)(Object)this))return;
 
 		AtomicReference<CrashInfo> crash = new AtomicReference<>();
 		ThreadPool pool = DimThread.getThreadPool((MinecraftServer)(Object)this);
@@ -86,6 +84,28 @@ public abstract class MinecraftServerMixin {
 	 * */
 	@Inject(method = "shutdown", at = @At("HEAD"))
 	public void shutdownThreadpool(CallbackInfo ci) {
-		DimThread.MANAGER.threadPools.forEach((server, pool) -> pool.shutdown());
+		getDimThreadPool().shutdown();
+	}
+
+	private boolean dimthread_active;
+	private ThreadPool dimthread_threadPool;
+	@Override
+	public boolean isDimThreadActive() {
+		return dimthread_active;
+	}
+
+	@Override
+	public void setDimThreadActive(boolean active) {
+		this.dimthread_active = active;
+	}
+
+	@Override
+	public ThreadPool getDimThreadPool() {
+		return dimthread_threadPool;
+	}
+
+	@Override
+	public void setDimThreadPool(ThreadPool pool) {
+		this.dimthread_threadPool = pool;
 	}
 }

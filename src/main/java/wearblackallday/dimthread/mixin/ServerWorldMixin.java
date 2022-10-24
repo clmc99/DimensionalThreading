@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import wearblackallday.dimthread.DimThread;
+import wearblackallday.dimthread.util.ServerManager;
 import wearblackallday.dimthread.util.ServerWorldAccessor;
 
 import java.util.function.Supplier;
@@ -33,7 +33,7 @@ public abstract class ServerWorldMixin extends World implements ServerWorldAcces
 	 */
 	@Inject(method = "tickTime", at = @At("HEAD"), cancellable = true)
 	private void preventTimeTicking(CallbackInfo ci) {
-		if (DimThread.MANAGER.isActive(getServer()) && !onMainThread) {
+		if (ServerManager.isActive(getServer()) && !onMainThread) {
 			timeTickedOnWorldThread = true;
 			ci.cancel();
 		}

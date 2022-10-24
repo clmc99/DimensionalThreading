@@ -1,25 +1,32 @@
 package wearblackallday.dimthread;
 
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
 import wearblackallday.dimthread.init.ModGameRules;
 import wearblackallday.dimthread.thread.IMutableMainThread;
+import wearblackallday.dimthread.util.IThreadedServer;
 import wearblackallday.dimthread.util.ServerManager;
 import wearblackallday.dimthread.util.ThreadPool;
 
 public class DimThread implements ModInitializer {
 
 	public static final String MOD_ID = "dimthread";
-	public static final ServerManager MANAGER = new ServerManager();
 
 	@Override
 	public void onInitialize() {
 		ModGameRules.registerGameRules();
+		ServerLifecycleEvents.SERVER_STARTED.register(this::onServerLoaded);
+	}
+
+	public void onServerLoaded(MinecraftServer server) {
+		((IThreadedServer)server).setDimThreadPool(new ThreadPool(server.getGameRules().getInt(ModGameRules.THREAD_COUNT.getKey())));
+		((IThreadedServer)server).setDimThreadActive(server.getGameRules().getBoolean(ModGameRules.ACTIVE.getKey()));
 	}
 
 	public static ThreadPool getThreadPool(MinecraftServer server) {
-		return MANAGER.getThreadPool(server);
+		return ServerManager.getThreadPool(server);
 	}
 
 	public static void swapThreadsAndRun(Runnable task, Object... threadedObjects) {
